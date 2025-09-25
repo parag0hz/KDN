@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "@mkkellogg/gaussian-splats-3d": "^0.4.7",
+    "react-router-dom": "^7.9.1",
+    "three": "^0.180.0",
+    "uuid": "^13.0.0"
+  }
+}
