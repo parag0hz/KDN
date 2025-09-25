@@ -16,7 +16,7 @@ export default function MainPage() {
                 <div style={container}>
                     <h2 className="h2">데모 체험</h2>
                     <p className="sub">.ksplat / .splat / .ply 파일 업로드로 3D 확인</p>
-                    <UploadCard height={260} compact />
+                    <UploadCard height={400} compact={false} />
                 </div>
             </section>
 
