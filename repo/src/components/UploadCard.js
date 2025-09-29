@@ -32,7 +32,7 @@ function fitCameraToScene(viewer, isFlipped = false) {
     cam.far = Math.max(cam.near + 1, dist * 20);
     cam.fov = 45;
     cam.updateProjectionMatrix?.();
-    
+
     // 자연스러운 카메라 위치 (GitHub 예제 기반)
     if (isFlipped) {
       // 상하 반전 시: 위에서 아래로 보는 시점
@@ -43,7 +43,7 @@ function fitCameraToScene(viewer, isFlipped = false) {
       const pos = c.clone().add(new THREE.Vector3(0.5, -1.2, 1.0).normalize().multiplyScalar(dist * 1.5));
       viewer.setCameraLookAt({ position: pos.toArray(), target: c.toArray() });
     }
-    
+
     console.log("GS3D 카메라 위치 조정:", { target: c.toArray(), flipped: isFlipped });
   } catch (err) {
     console.error("카메라 조정 오류:", err);
@@ -65,13 +65,24 @@ export default function UploadCard({ height = 360, compact = false }) {
   const [fileName, setFileName] = useState("");
   const [isFlipped, setIsFlipped] = useState(false);
 
+  // GS3D 캔버스 가시성 토글 (three.js 렌더 시 겹침 방지)
+  function setGS3DCanvasVisible(visible) {
+    const el = mountRef.current;
+    if (!el) return;
+    const gsCanvas = [...el.querySelectorAll('canvas')].find(c => !c.dataset?.renderer);
+    if (gsCanvas) {
+      gsCanvas.style.visibility = visible ? 'visible' : 'hidden';
+      gsCanvas.style.pointerEvents = visible ? 'auto' : 'none';
+    }
+  }
+
   // three.js 리소스 정리
   function disposeThree() {
     const t = threeRef.current;
     if (t.resizeObs) {
       try {
         t.resizeObs.disconnect();
-      } catch {}
+      } catch { }
       t.resizeObs = null;
     }
     if (t.rafId) {
@@ -81,13 +92,13 @@ export default function UploadCard({ height = 360, compact = false }) {
     if (t.controls) {
       try {
         t.controls.dispose();
-      } catch {}
+      } catch { }
       t.controls = null;
     }
     if (t.renderer) {
       try {
         t.renderer.dispose();
-      } catch {}
+      } catch { }
       t.renderer = null;
     }
     if (t.scene) {
@@ -99,18 +110,32 @@ export default function UploadCard({ height = 360, compact = false }) {
             obj.material?.dispose?.();
           }
         });
-      } catch {}
+      } catch { }
       t.scene = null;
     }
     t.camera = null;
     t.object = null;
 
-    // 기존 three 캔버스 제거
+    // 안전한 three 캔버스 제거 (removeChild 에러 방지)
     const el = mountRef.current;
     if (el) {
-      [...el.querySelectorAll("canvas")].forEach((c) => {
-        if (c.dataset?.renderer === "three") c.remove();
-      });
+      try {
+        const canvases = el.querySelectorAll("canvas[data-renderer='three']");
+        canvases.forEach((canvas) => {
+          try {
+            if (canvas && canvas.isConnected && typeof canvas.remove === 'function') {
+              canvas.remove();
+            } else if (canvas && canvas.parentNode) {
+              try { canvas.parentNode.removeChild(canvas); } catch { /* no-op */ }
+            }
+          } catch (innerError) {
+            console.warn("개별 캔버스 제거 중 에러 (무시됨):", innerError);
+          }
+        });
+      } catch (error) {
+        console.warn("Three.js 캔버스 정리 중 에러 (무시됨):", error);
+        // 에러가 나도 계속 진행
+      }
     }
   }
 
@@ -129,7 +154,7 @@ export default function UploadCard({ height = 360, compact = false }) {
     t.camera.near = Math.max(0.01, dist * 0.001);
     t.camera.far = Math.max(t.camera.near + 1, dist * 50);
     t.camera.updateProjectionMatrix();
-    
+
     // 자연스러운 카메라 위치
     if (isFlipped) {
       // 상하 반전 시: 위에서 아래로 보는 시점
@@ -140,10 +165,10 @@ export default function UploadCard({ height = 360, compact = false }) {
       const pos = c.clone().add(new THREE.Vector3(0.5, -1.2, 1.0).normalize().multiplyScalar(dist * 1.6));
       t.camera.position.copy(pos);
     }
-    
+
     t.controls?.target.copy(c);
     t.controls?.update();
-    
+
     console.log("Three.js 카메라 위치 조정:", { target: c.toArray(), flipped: isFlipped });
   }
 
@@ -158,11 +183,11 @@ export default function UploadCard({ height = 360, compact = false }) {
     }
 
     console.log("Three.js 렌더러 초기화 중...", "컨테이너 크기:", el.clientWidth, "x", el.clientHeight);
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-    renderer.setClearColor(0x0b1430);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setClearColor(0x000000, 0);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.setSize(el.clientWidth || 400, el.clientHeight || 360);
-    
+
     const canvas = renderer.domElement;
     canvas.style.position = "absolute";
     canvas.style.top = "0";
@@ -172,9 +197,17 @@ export default function UploadCard({ height = 360, compact = false }) {
     canvas.style.display = "block";
     canvas.style.zIndex = "1";
     canvas.dataset.renderer = "three";
-    
-    el.innerHTML = '';
-    el.appendChild(canvas);
+
+    // 안전한 캔버스 추가
+    try {
+      if (el && canvas) {
+        el.appendChild(canvas);
+        setGS3DCanvasVisible(false);
+      }
+    } catch (error) {
+      console.error("캔버스 추가 중 에러:", error);
+      throw new Error("캔버스를 추가할 수 없습니다");
+    }
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(
@@ -198,15 +231,15 @@ export default function UploadCard({ height = 360, compact = false }) {
     console.log("PLY 파일 로딩 중...");
     const loader = new PLYLoader();
     const geometry = await new Promise((resolve, reject) =>
-      loader.load(url, 
+      loader.load(url,
         (geo) => {
           console.log("PLY 로드 성공:", geo);
           console.log("Vertices:", geo.attributes.position?.count || 0);
           resolve(geo);
-        }, 
+        },
         (progress) => {
           console.log("PLY 로드 진행:", progress);
-        }, 
+        },
         (error) => {
           console.error("PLY 로드 오류:", error);
           reject(error);
@@ -246,7 +279,7 @@ export default function UploadCard({ height = 360, compact = false }) {
       resizeObs: null,
       object,
     };
-    
+
     console.log("카메라 위치 조정 중...");
     fitCameraThree(object, isFlipped);
 
@@ -267,7 +300,7 @@ export default function UploadCard({ height = 360, compact = false }) {
     });
     ro.observe(el);
     threeRef.current.resizeObs = ro;
-    
+
     console.log("Three.js PLY 렌더링 설정 완료");
   }
 
@@ -302,7 +335,7 @@ export default function UploadCard({ height = 360, compact = false }) {
           console.log("GS3D 캔버스 스타일 패치 완료");
         }
       };
-      
+
       setTimeout(patch, 100);
       const mo = new MutationObserver(patch);
       mo.observe(mountRef.current, { childList: true, subtree: true });
@@ -310,12 +343,19 @@ export default function UploadCard({ height = 360, compact = false }) {
       return () => {
         mo.disconnect();
         try {
+          // GS3D Viewer 정리
           viewerRef.current?.dispose?.();
         } catch (e) {
           console.warn("GS3D Viewer dispose 오류:", e);
         }
         viewerRef.current = null;
-        disposeThree();
+
+        // Three.js 정리 (안전하게)
+        try {
+          disposeThree();
+        } catch (e) {
+          console.warn("Three.js cleanup 오류:", e);
+        }
       };
     } catch (error) {
       console.error("GS3D Viewer 초기화 실패:", error);
@@ -327,7 +367,7 @@ export default function UploadCard({ height = 360, compact = false }) {
   async function handleLocalFile(e) {
     const file = e.target.files?.[0];
     if (!file) return;
-    
+
     console.log(`파일 선택됨: ${file.name}, 크기: ${file.size}바이트`);
     setFileName(file.name);
 
@@ -345,9 +385,11 @@ export default function UploadCard({ height = 360, compact = false }) {
     if (file.name.toLowerCase().endsWith(".ply")) {
       try {
         console.log("PLY 파일 렌더링 시작...");
+        // GS3D 뷰어 정리 (안전하게)
         try {
           await viewerRef.current?.clear?.();
-        } catch {}
+        } catch { }
+        // Three.js에서 PLY 렌더링
         await renderPLYWithThree(url);
         console.log("PLY 파일 렌더링 완료!");
       } catch (err) {
@@ -361,9 +403,11 @@ export default function UploadCard({ height = 360, compact = false }) {
 
     // ksplat/splat는 GS3D로 렌더링
     console.log("Splat 파일 렌더링 시작...");
+    // Three.js 정리 (안전하게)
     disposeThree();
+    setGS3DCanvasVisible(true);
     const viewer = viewerRef.current;
-    
+
     if (!viewer) {
       console.error("GS3D 뷰어가 초기화되지 않았습니다");
       alert("뷰어가 준비되지 않았습니다. 페이지를 새로고침하세요.");
@@ -374,22 +418,22 @@ export default function UploadCard({ height = 360, compact = false }) {
     try {
       console.log("기존 씬 정리 중...");
       await viewer.clear?.();
-      
+
       console.log("새 씬 로드 중...", { format, url: url.slice(0, 50) + "..." });
       await viewer.addSplatScene(url, { format, showLoadingUI: true });
-      
+
       console.log("씬 로드 완료, 렌더링 시작 시도...");
-      
+
       if (viewer.start) {
         await viewer.start();
         console.log("뷰어 시작됨");
       }
-      
+
       console.log("카메라 조정 중...");
       fitCameraToScene(viewer, isFlipped);
       setTimeout(() => fitCameraToScene(viewer, isFlipped), 500);
       setTimeout(() => fitCameraToScene(viewer, isFlipped), 1000);
-      
+
       console.log("Splat 파일 렌더링 완료!");
     } catch (err) {
       console.error("스플랫 로드 실패:", err);
@@ -401,19 +445,19 @@ export default function UploadCard({ height = 360, compact = false }) {
 
   const grid = compact
     ? {
-        display: "grid",
-        gridTemplateColumns: "1fr",
-        gap: 12,
-        alignItems: "start",
-        gridAutoRows: "min-content",
-      }
+      display: "grid",
+      gridTemplateColumns: "1fr",
+      gap: 12,
+      alignItems: "start",
+      gridAutoRows: "min-content",
+    }
     : {
-        display: "grid",
-        gridTemplateColumns: "1fr 360px",
-        gap: 16,
-        alignItems: "start",
-        gridAutoRows: "min-content",
-      };
+      display: "grid",
+      gridTemplateColumns: "1fr 360px",
+      gap: 16,
+      alignItems: "start",
+      gridAutoRows: "min-content",
+    };
 
   return (
     <div style={grid}>
@@ -431,17 +475,17 @@ export default function UploadCard({ height = 360, compact = false }) {
           minHeight: 300,
         }}
       >
-        <div 
-          id="gs3d-mount" 
-          ref={mountRef} 
-          style={{ 
-            position: "absolute", 
+        <div
+          id="gs3d-mount"
+          ref={mountRef}
+          style={{
+            position: "absolute",
             inset: 0,
             width: "100%",
             height: "100%",
             zIndex: 1,
             background: "rgba(11, 20, 48, 0.5)"
-          }} 
+          }}
         />
         {/* 디버그용 정보 */}
         <div style={{
@@ -489,15 +533,35 @@ export default function UploadCard({ height = 360, compact = false }) {
           padding: 16,
         }}
       >
-        <h3 style={{ margin: "4px 0 8px" }}>파일 업로드</h3>
-        <p style={{ color: "#9fb0d0" }}>
+        <h3 style={{ margin: "4px 0 8px", color: "#fff" }}>파일 업로드</h3>
+        <p style={{ color: "#9fb0d0", marginBottom: "16px" }}>
           지원: <code>.ksplat</code> / <code>.splat</code> / <code>.ply</code>
         </p>
-        <input type="file" accept=".ksplat,.splat,.ply" onChange={handleLocalFile} />
+        <label style={{
+          display: "inline-block",
+          background: "#ffffff",
+          color: "#2563ca",
+          padding: "12px 24px",
+          borderRadius: "28px",
+          cursor: "pointer",
+          fontSize: "18px",
+          fontWeight: "700",
+          boxShadow: "-1px 2px 9.8px 0px rgba(208, 223, 249, 1)",
+          border: "none",
+          textAlign: "center"
+        }}>
+          파일 선택<img src="img/Layer_1.svg" />
+          <input
+            type="file"
+            accept=".ksplat,.splat,.ply"
+            onChange={handleLocalFile}
+            style={{ display: "none" }}
+          />
+        </label>
         <div style={{ fontSize: 13, color: "#9fb0d0", marginTop: 8 }}>
           {fileName ? `선택됨: ${fileName}` : "선택된 파일 없음"}
         </div>
-        
+
         {/* Y축 반전 토글 버튼 */}
         {fileName && (
           <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid rgba(255,255,255,0.1)" }}>
