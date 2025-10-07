@@ -100,7 +100,8 @@ export default function MainPage() {
                         right: 0,
                         bottom: 0,
                         background: 'linear-gradient(180deg, #FFF 0%, rgba(255, 255, 255, 0.00) 87.98%)',
-                        pointerEvents: 'none'
+                        pointerEvents: 'none',
+                        zIndex: 2
                     }}></div>
 
                     {/* 아래에서 위로 선형 그라디언트 */}
@@ -111,7 +112,8 @@ export default function MainPage() {
                         right: 0,
                         bottom: 0,
                         background: 'linear-gradient(0deg, #FFF 0%, rgba(255, 255, 255, 0.00) 87.98%)',
-                        pointerEvents: 'none'
+                        pointerEvents: 'none',
+                        zIndex: 2
                     }}></div>
 
                     <div style={{ ...container, position: 'relative', zIndex: 1 }}>
@@ -132,7 +134,6 @@ export default function MainPage() {
                                 onCanPlay={() => console.log('Video can play')}
                                 style={{
                                     width: '100%',
-                                    maxWidth: '800px',
                                     height: 'auto',
                                     borderRadius: '16px',
                                     boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)'
@@ -256,7 +257,7 @@ export default function MainPage() {
                 }}>
                     <div style={container}>
                         <div style={{
-                            textAlign: 'center',
+                            textAlign: 'left',
                             marginBottom: '60px'
                         }}>
                             <h2 style={{
@@ -273,7 +274,7 @@ export default function MainPage() {
                                 margin: '0',
                                 fontWeight: '400'
                             }}>
-                                3D 시각화와 침수 위험 분석을 위한 전문 기능들
+                                3D 시각화와 전문 분석 기능을 통해 침수 위험 확인 & 예측
                             </p>
                         </div>
                         <FeatureTiles />
