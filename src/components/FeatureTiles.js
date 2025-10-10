@@ -43,14 +43,13 @@ export default function FeatureTiles() {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 40px;
-            max-width: 1500px;
-            margin: 0 auto;
-            padding: 0 20px;
+            width: 100%;
+            margin: 0;
+            padding: 0;
         }
         
         .feature-card {
             width: 100%;
-            max-width: 473px;
             height: 232px;
             flex-shrink: 0;
             background: #ffffff;
@@ -61,7 +60,6 @@ export default function FeatureTiles() {
             flex-direction: column;
             align-items: flex-start;
             box-sizing: border-box;
-            margin: 0 auto;
         }
         
         .feature-icon {
@@ -95,7 +93,6 @@ export default function FeatureTiles() {
         @media (max-width: 1200px) {
             .feature-grid {
                 grid-template-columns: repeat(2, 1fr);
-                max-width: 1000px;
                 gap: 35px;
             }
         }
@@ -104,12 +101,10 @@ export default function FeatureTiles() {
             .feature-grid {
                 grid-template-columns: 1fr;
                 gap: 30px;
-                max-width: 500px;
-                padding: 0 15px;
+                padding: 0;
             }
             .feature-card {
                 width: 100%;
-                max-width: none;
                 height: auto;
                 min-height: 200px;
                 padding: 35px 25px;
@@ -129,7 +124,7 @@ export default function FeatureTiles() {
         
         @media (max-width: 480px) {
             .feature-grid {
-                padding: 0 10px;
+                padding: 0;
                 gap: 25px;
             }
             .feature-card {

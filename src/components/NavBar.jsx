@@ -23,7 +23,7 @@ export default function NavBar() {
                 padding: 8px 20px !important;
             }
             .navbar-logo img {
-                height: 80px !important;
+                height: 100px !important;
             }
             .navbar-menu {
                 display: none !important;
@@ -55,7 +55,7 @@ export default function NavBar() {
                 padding: 8px 16px !important;
             }
             .navbar-logo img {
-                height: 60px !important;
+                height: 80px !important;
             }
             .navbar-link {
                 font-size: 18px !important;
@@ -120,14 +120,14 @@ export default function NavBar() {
                 <div style={wrap} className="navbar-wrap">
                     <Link to="/" style={{ fontWeight: 800 }} className="navbar-logo">
                         <img src="/img/Untitled-2 1.png" alt="3DGS Logo" style={{
-                            height: "120px",
+                            height: "150px",
                             width: "auto",
                             transition: "height 0.2s ease"
                         }} />
                     </Link>
 
                     {/* 데스크톱 메뉴 */}
-                    <div className="navbar-menu">
+                    <div className="navbar-menu" style={{ marginRight: "50px" }}>
                         {link("/", "Main")}
                         {link("/report", "Report")}
                         {link("/viewer", "3D")}

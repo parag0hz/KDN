@@ -54,7 +54,7 @@ export default function Hero() {
                             color: '#000000',
                             marginBottom: '16px'
                         }}>
-                            한전 KDN 3DS 기반 침수취약 지역 솔루션
+                            한전 KDN 3DGS 기반 침수취약 지역 솔루션
                         </div>
                         <div style={{
                             fontSize: '16px',

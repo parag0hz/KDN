@@ -1,6 +1,6 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "3DGS",
+  "name": "3DGS - 3D Gaussian Splatting 홍수 제보 시스템",
   "icons": [
     {
       "src": "favicon.ico",

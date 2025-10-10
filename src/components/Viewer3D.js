@@ -56,7 +56,7 @@ function fitCameraToScene(viewer, isFlipped = false) {
     }
 }
 
-export default function Viewer3D({ file, isFlipped, onLoadComplete, onError }) {
+export default function Viewer3D({ file, isFlipped, onLoadComplete, onError, onClick }) {
     const mountRef = useRef(null); // 캔버스가 붙는 컨테이너
     const viewerRef = useRef(null); // GS3D 뷰어 참조
     const threeRef = useRef({
@@ -194,7 +194,11 @@ export default function Viewer3D({ file, isFlipped, onLoadComplete, onError }) {
         }
 
         console.log("Three.js 렌더러 초기화 중...", "컨테이너 크기:", el.clientWidth, "x", el.clientHeight);
-        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        const renderer = new THREE.WebGLRenderer({
+            antialias: true,
+            alpha: true,
+            preserveDrawingBuffer: true  // 캡쳐를 위해 추가
+        });
         renderer.setClearColor(0x000000, 0);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
         renderer.setSize(el.clientWidth || 400, el.clientHeight || 360);
@@ -208,6 +212,31 @@ export default function Viewer3D({ file, isFlipped, onLoadComplete, onError }) {
         canvas.style.display = "block";
         canvas.style.zIndex = "1";
         canvas.dataset.renderer = "three";
+
+        // 클릭 이벤트 추가
+        canvas.addEventListener('click', (event) => {
+            if (onClick && threeRef.current?.camera && threeRef.current?.object) {
+                const rect = canvas.getBoundingClientRect();
+                const mouse = new THREE.Vector2();
+                mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+                mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+                const raycaster = new THREE.Raycaster();
+                raycaster.setFromCamera(mouse, threeRef.current.camera);
+
+                const intersects = raycaster.intersectObject(threeRef.current.object);
+                if (intersects.length > 0) {
+                    const point = intersects[0].point;
+                    onClick({
+                        x: point.x,
+                        y: point.y,
+                        z: point.z,
+                        screenX: event.clientX,
+                        screenY: event.clientY
+                    });
+                }
+            }
+        });
 
         // 안전한 캔버스 추가
         try {
@@ -328,8 +357,15 @@ export default function Viewer3D({ file, isFlipped, onLoadComplete, onError }) {
                 initialCameraLookAt: [0, 0, 0],
                 sharedMemoryForWorkers: !!window.crossOriginIsolated,
                 showLoadingUI: true,
+                webGLOptions: {
+                    preserveDrawingBuffer: true  // 캡쳐를 위해 추가
+                }
             });
             viewerRef.current = v;
+
+            // 전역 접근을 위해 window에 뷰어 참조 저장
+            window.gs3dViewer = v;
+
             console.log("GS3D Viewer 초기화 완료");
 
             const patch = () => {
@@ -456,13 +492,62 @@ export default function Viewer3D({ file, isFlipped, onLoadComplete, onError }) {
                     await viewer.clear?.();
 
                     console.log("새 씬 로드 중...", { format, url: url.slice(0, 50) + "..." });
-                    await viewer.addSplatScene(url, { format, showLoadingUI: true });
+
+                    // GS3D 로드 시 에러 처리 개선
+                    try {
+                        await viewer.addSplatScene(url, {
+                            format,
+                            showLoadingUI: true,
+                            // 추가 옵션들
+                            splatAlphaRemovalThreshold: 1,
+                            halfPrecisionCovariancesOnGPU: true,
+                            devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2)
+                        });
+                    } catch (splatError) {
+                        console.error("Splat 파일 로드 세부 오류:", splatError);
+
+                        // 구체적인 오류 메시지 제공
+                        if (splatError.message.includes('Invalid typed array length') ||
+                            splatError.message.includes('RangeError')) {
+                            throw new Error("파일이 손상되었거나 올바른 형식이 아닙니다. 다른 파일을 시도해보세요.");
+                        } else if (splatError.message.includes('network') ||
+                            splatError.message.includes('fetch')) {
+                            throw new Error("네트워크 오류로 파일을 불러올 수 없습니다. 연결을 확인하고 다시 시도해주세요.");
+                        } else {
+                            throw new Error(`파일 로드 실패: ${splatError.message}`);
+                        }
+                    }
 
                     console.log("씬 로드 완료, 렌더링 시작 시도...");
 
                     if (viewer.start) {
                         await viewer.start();
                         console.log("뷰어 시작됨");
+                    }
+
+                    // GS3D 캔버스에 클릭 이벤트 추가
+                    const gsCanvas = mountRef.current?.querySelector('canvas:not([data-renderer])');
+                    if (gsCanvas && onClick) {
+                        const handleGSClick = (event) => {
+                            const rect = gsCanvas.getBoundingClientRect();
+                            const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+                            const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+                            // GS3D에서는 정확한 3D 포인트를 가져오기 어려우므로 근사값 사용
+                            onClick({
+                                x: x * 5, // 대략적인 스케일
+                                y: y * 5,
+                                z: 0,
+                                screenX: event.clientX,
+                                screenY: event.clientY,
+                                isApproximate: true
+                            });
+                        };
+
+                        gsCanvas.addEventListener('click', handleGSClick);
+
+                        // 클릭 이벤트 정리를 위한 참조 저장
+                        gsCanvas._clickHandler = handleGSClick;
                     }
 
                     console.log("카메라 조정 중...");
@@ -562,26 +647,6 @@ export default function Viewer3D({ file, isFlipped, onLoadComplete, onError }) {
                     로딩 중...
                 </div>
             )}
-
-            {/* 디버그용 정보 */}
-            <div style={{
-                position: "absolute",
-                top: 8,
-                right: 8,
-                background: "rgba(0,0,0,0.8)",
-                color: "white",
-                padding: "8px 12px",
-                borderRadius: 4,
-                fontSize: 11,
-                zIndex: 10,
-                pointerEvents: "none",
-                fontFamily: "monospace"
-            }}>
-                <div>뷰어 크기: {mountRef.current?.clientWidth || 0} × {mountRef.current?.clientHeight || 0}</div>
-                <div>GS3D 초기화: {viewerRef.current ? '✓' : '✗'}</div>
-                <div>Three.js 활성: {threeRef.current?.renderer ? '✓' : '✗'}</div>
-                {file && <div>파일: {file.name}</div>}
-            </div>
 
             {/* 중앙 안내 텍스트 */}
             {!file && (
