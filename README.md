@@ -1,70 +1,24 @@
-# Getting Started with Create React App
+### 1. 프로젝트 배경 및 목표
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+- **문제 제기:** 기존 2D 지도는 평면적인 정보 제공에 그쳐 현장의 침수 깊이나 피해 규모를 파악하기 어렵다는 한계가 존재합니다.
+- **해결 방안:** 3D 공간 모델링과 시민 제보를 결합한 플랫폼을 구축하여 행정기관과 시민이 재난 상황을 실시간으로 인지하고 대응할 수 있는 환경을 목표로 했습니다.
 
-## Available Scripts
+### 2. 주요 역할 및 기술적 기여
 
-In the project directory, you can run:
+**3D 환경 구축 및 데이터 파이프라인 설계** * **데이터 수집 및 전처리:** 강수량 데이터와 시민 제보(위치, 사진, 영상)를 수집하여 지도에 시각화합니다. 수집된 데이터는 AWS S3에 저장되며, Flask 서버를 기반으로 이미지/영상 판별 및 FFmpeg 전처리를 수행합니다.
 
-### `npm start`
+- **3DGS 기반 렌더링 시스템 통합:** 정제된 데이터를 3DGS 모델에 입력하여 `.ksplat` 형식의 3D 포인트로 생성하고, Three.js 기반 뷰어에서 실시간 렌더링을 구현했습니다. 브라우저 환경에서의 원활한 구동을 위해 CORS 및 COEP 보안 환경을 최적화했습니다.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+**공공 안전 맞춤형 UI/UX 및 분석 기능 개발**
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+- **침수 깊이 시각화:** 포인트 클라우드 및 뎁스 데이터를 활용하여 3D 공간 내 침수 깊이를 오버레이로 표현했습니다.
+- **사용자 친화적 제보 기능:** 화면 확대·축소·회전을 통해 세밀한 구역을 확인하고, 화면 클릭을 통한 좌표 기반으로 정확하고 직관적인 침수 상황 제보 기능을 구현했습니다.
 
-### `npm test`
+**시민 제보 데이터 프라이버시 보호 시스템 구축** * **민감 정보 자동 비식별화:** 시민 제보 영상 및 이미지 학습 시 발생할 수 있는 프라이버시 문제를 방지하기 위해 얼굴, 차량 번호판 등 민감 정보를 자동 인식하여 Blur 및 Masking 처리하는 기술을 적용했습니다.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+- **품질 유지:** 개인정보보호 처리 후에도 시각적 품질(PSNR)을 유지하고 학습 시간 안정성을 확보하여 공공 데이터 기반 실시간 3D 모델링 서비스의 적용 가능성을 제시했습니다.
 
-### `npm run build`
+### 3. 프로젝트 회고 및 인사이트
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+- 단순한 시각화를 넘어 데이터 수집(AWS S3, Flask), 3D 재구성(3DGS), 그리고 비식별화 처리까지 이어지는 복합적인 실시간 파이프라인 구축 경험을 쌓았습니다.
+- 기술적 완성도와 더불어, 실제 재난 현장과 공공 서비스에서 필수적으로 요구되는 '프라이버시 보호'와 '사용자 직관성'의 균형을 맞추는 개발 프로세스의 중요성을 깊이 체감했습니다.
